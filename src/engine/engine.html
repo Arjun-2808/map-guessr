@@ -1,0 +1,993 @@
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-bleed blank map; quiet floating chrome; the green road-sign prompt is the one loud element. */
+:root{
+  --sea:#cddfe3; --sea-line:#a8c3c9;
+  --land:#eef0d3; --land-hover:#dde2b2; --land-off:#dfe5e1;
+  --border-kab:#9ca88e; --border-prov:#6e5847; --coast:#7c9aa0;
+  --panel:#f8fbfa; --panel-2:#eaf1f0; --ink:#16262b; --muted:#566a6f; --rule:#c6d4d5;
+  --sign:#0a6a3c; --sign-ink:#ffffff;
+  --good:#23894b; --good-fill:#b9dfbf; --mid-fill:#f0d784; --late-fill:#f2b483; --bad:#c9372e; --bad-fill:#eba59e;
+  --focus:#1c66c9;
+  --shadow:0 1px 2px rgba(18,38,43,.14), 0 8px 22px rgba(18,38,43,.10);
+  --f-display:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;
+  --f-body:"Barlow","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sea:#0c191e; --sea-line:#1d343b;
+    --land:#2b3a2f; --land-hover:#3b4c3e; --land-off:#19252a;
+    --border-kab:#4c5d4e; --border-prov:#b89c80; --coast:#4b6a70;
+    --panel:#132227; --panel-2:#1b2d33; --ink:#e3edec; --muted:#93a8ab; --rule:#2c434a;
+    --sign:#0b6b3d; --sign-ink:#ffffff;
+    --good:#5cc482; --good-fill:#2e5a3b; --mid-fill:#6b5b24; --late-fill:#6f4a2a; --bad:#ef6a60; --bad-fill:#6e302b;
+    --focus:#6fa8ff;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --sea:#0c191e; --sea-line:#1d343b;
+  --land:#2b3a2f; --land-hover:#3b4c3e; --land-off:#19252a;
+  --border-kab:#4c5d4e; --border-prov:#b89c80; --coast:#4b6a70;
+  --panel:#132227; --panel-2:#1b2d33; --ink:#e3edec; --muted:#93a8ab; --rule:#2c434a;
+  --sign:#0b6b3d; --sign-ink:#ffffff;
+  --good:#5cc482; --good-fill:#2e5a3b; --mid-fill:#6b5b24; --late-fill:#6f4a2a; --bad:#ef6a60; --bad-fill:#6e302b;
+  --focus:#6fa8ff;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--sea);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.4;overflow:hidden;-webkit-font-smoothing:antialiased}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+#app{position:fixed;inset:0;overflow:hidden}
+
+/* ---------- map ---------- */
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+#sea{fill:var(--sea)}
+body.ph-guess #map{cursor:crosshair}
+body.ph-setup #map{cursor:pointer}
+#world path{vector-effect:non-scaling-stroke}
+.grat{fill:none;stroke:var(--sea-line);stroke-width:.7;pointer-events:none}
+.equator{fill:none;stroke:var(--sea-line);stroke-width:1.4;stroke-dasharray:9 5;pointer-events:none}
+#land path{fill:var(--land-off);stroke:none;transition:fill .18s}
+#land path.in{fill:var(--land)}
+#land path.lake{fill:var(--sea);stroke:var(--coast);stroke-width:.6}
+#land path.void{fill:var(--land-off)}
+body.hover.ph-guess #land path.in:not(.s1):not(.s2):not(.s3):not(.sx):hover,#land path.ph{fill:var(--land-hover)}
+#land path.s1{fill:var(--good-fill)}
+#land path.s2{fill:var(--mid-fill)}
+#land path.s3{fill:var(--late-fill)}
+#land path.sx{fill:var(--bad-fill)}
+#land path.t-hit{fill:var(--good-fill)}
+#land path.t-miss{fill:var(--mid-fill)}
+#land path.c-wrong{fill:var(--bad-fill)}
+#land path.flash{animation:flash .7s ease-out}
+#land path.pulse{animation:pulse 1.1s ease-in-out infinite}
+@keyframes flash{0%,40%{fill:var(--bad)}}
+@keyframes pulse{50%{fill:var(--bad)}}
+.bk{fill:none;stroke:var(--border-kab);stroke-width:.6;pointer-events:none}
+.bp{fill:none;stroke:var(--border-prov);stroke-width:1.25;stroke-dasharray:8 2.5 1.5 2.5;pointer-events:none}
+.coast{fill:none;stroke:var(--coast);stroke-width:.85;pointer-events:none}
+#hlProv{fill:none;stroke:var(--sign);stroke-width:2.4;pointer-events:none}
+#hlTarget{fill:none;stroke:var(--ink);stroke-width:2;pointer-events:none}
+.ov-line{stroke:var(--ink);stroke-width:1.6;stroke-dasharray:5 4;fill:none}
+.ov-pin{fill:var(--bad);stroke:var(--panel);stroke-width:2}
+.ov-near{fill:var(--ink)}
+.lbl{font:600 14px var(--f-display);letter-spacing:.02em;fill:var(--ink);paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round;pointer-events:none}
+.lbl.muted{font-weight:500;fill:var(--muted)}
+.coord{font:500 11px var(--f-body);letter-spacing:.06em;fill:var(--muted);opacity:.85;pointer-events:none}
+
+/* ---------- floating chrome ---------- */
+.float{position:absolute;background:var(--panel);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow)}
+.btn{background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:7px 12px;font-size:14px;font-weight:500;cursor:pointer;line-height:1.2}
+.btn:hover{background:var(--panel-2)}
+.btn-primary{background:var(--ink);color:var(--panel);border:0;border-radius:8px;padding:11px 18px;font:600 18px/1 var(--f-display);letter-spacing:.07em;text-transform:uppercase;cursor:pointer}
+.btn-primary:hover{opacity:.9}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.lab{font:600 11.5px var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+
+#bar{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+#bar>*{pointer-events:auto}
+.brand{display:flex;flex-direction:column;gap:1px;background:var(--panel);border:1px solid var(--rule);border-radius:8px;padding:6px 10px;box-shadow:var(--shadow)}
+.wm{font:700 17px/1 var(--f-display);letter-spacing:.08em;text-transform:uppercase}
+.brand small{font-size:12px;color:var(--muted)}
+
+#play{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:max-content;max-width:calc(100vw - 24px)}
+#play>*{pointer-events:auto}
+.sign{background:var(--sign);color:var(--sign-ink);padding:5px;border-radius:10px;box-shadow:var(--shadow);min-width:250px;max-width:min(580px,calc(100vw - 24px))}
+.sign-in{border:2.5px solid var(--sign-ink);border-radius:6px;padding:7px 24px 10px;text-align:center}
+.sign-type{font:600 14px/1 var(--f-display);letter-spacing:.22em;text-transform:uppercase;opacity:.92}
+.sign-name{font:600 clamp(30px,4.6vw,46px)/1.04 var(--f-display);letter-spacing:.01em;text-wrap:balance;margin-top:4px}
+.sign-sub{font:500 15px/1.2 var(--f-display);letter-spacing:.08em;text-transform:uppercase;margin-top:6px;padding-top:6px;border-top:1.5px solid color-mix(in srgb,var(--sign-ink) 45%,transparent)}
+.sign.swap .sign-name{animation:swap .32s ease-out}
+@keyframes swap{from{opacity:0;transform:translateY(6px)}}
+.hud{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.chip{background:var(--panel);border:1px solid var(--rule);border-radius:999px;padding:4px 11px;font-size:13.5px;font-variant-numeric:tabular-nums;box-shadow:var(--shadow);white-space:nowrap}
+.chip b{font-weight:600}
+button.chip{cursor:pointer}
+button.chip:hover{background:var(--panel-2)}
+
+#zoom{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;overflow:hidden}
+#zoom button{width:40px;height:40px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;color:var(--ink)}
+#zoom button+button{border-top:1px solid var(--rule)}
+#zoom button:hover{background:var(--panel-2)}
+#zoom svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+
+#result{left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));width:min(540px,calc(100vw - 24px));padding:14px 16px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;overflow:hidden}
+.r-verdict{font:600 24px/1.1 var(--f-display);letter-spacing:.02em}
+.r-detail{font-size:14px;color:var(--muted);margin-top:3px}
+.r-detail b{color:var(--ink);font-weight:600}
+.r-side{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.r-pts{font:700 30px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.r-bar{grid-column:1/-1;height:5px;background:var(--panel-2);margin:10px -16px 0}
+.r-bar i{display:block;height:100%;background:var(--good);width:0;transition:width .5s ease-out}
+
+#toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--panel);padding:9px 14px;border-radius:8px;font-size:14px;max-width:calc(100vw - 32px);box-shadow:var(--shadow);text-align:center;pointer-events:none}
+
+#tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font:500 13px var(--f-body);padding:4px 8px;border-radius:6px;white-space:nowrap;transform:translate(12px,12px);z-index:5}
+
+/* ---------- setup / end panel ---------- */
+#panel{left:12px;top:calc(12px + env(safe-area-inset-top,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:350px;overflow:auto;overscroll-behavior:contain}
+.pv{display:flex;flex-direction:column;gap:16px;padding:18px 20px 18px}
+.games{display:flex;flex-wrap:wrap;gap:5px}
+.games a{font:500 13px/1 var(--f-body);color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:999px;border:1px solid var(--rule)}
+.games a:hover{background:var(--panel-2);color:var(--ink)}
+.games a[aria-current="page"]{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.pv h1{font:700 36px/0.95 var(--f-display);letter-spacing:.04em;text-transform:uppercase;margin:0;text-wrap:balance}
+.pv h2{font:700 26px/1 var(--f-display);letter-spacing:.03em;text-transform:uppercase;margin:0}
+.lede{margin:6px 0 0;color:var(--muted);font-size:14.5px}
+.field{display:grid;gap:6px}
+.row2{display:grid;grid-template-columns:1fr;gap:8px}
+select{width:100%;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid var(--rule);background:var(--panel-2);font-size:14.5px;cursor:pointer}
+.seg{display:flex;background:var(--panel-2);border:1px solid var(--rule);border-radius:8px;padding:3px;gap:3px}
+.seg button{flex:1;min-width:0;border:0;background:transparent;color:var(--muted);font-size:14px;font-weight:500;padding:7px 4px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+.modes{display:grid;gap:8px}
+.mode{display:grid;gap:2px;text-align:left;border:1px solid var(--rule);background:var(--panel);border-radius:8px;padding:10px 12px;cursor:pointer}
+.mode[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.mode b{font:600 18px/1.1 var(--f-display);letter-spacing:.03em}
+.mode span{font-size:13px;color:var(--muted)}
+.scope{background:var(--panel-2);border-radius:8px;padding:10px 12px;display:grid;gap:2px;font-variant-numeric:tabular-nums}
+.scope strong{font:600 18px/1.15 var(--f-display);letter-spacing:.02em}
+.scope span{font-size:13.5px;color:var(--muted)}
+.tip-line{font-size:13px;color:var(--muted);margin:0}
+.credit{font-size:11.5px;color:var(--muted);margin:0;border-top:1px solid var(--rule);padding-top:10px}
+.credit a{color:inherit}
+.big{font:700 44px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.big small{font-size:22px;color:var(--muted);font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.stat{background:var(--panel-2);border-radius:8px;padding:8px;display:grid;gap:2px;text-align:center}
+.stat b{font:700 22px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.d1{background:var(--good-fill)}.d2{background:var(--mid-fill)}.d3{background:var(--late-fill)}.dx{background:var(--bad-fill)}
+.rounds{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--rule)}
+.rounds li{border-bottom:1px solid var(--rule)}
+.rounds button{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;background:none;border:0;padding:8px 2px;text-align:left;cursor:pointer;font-variant-numeric:tabular-nums}
+.rounds button:hover{background:var(--panel-2)}
+.rounds .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rounds .km{color:var(--muted);font-size:13px}
+.rounds .pt{font-weight:600;min-width:3.2em;text-align:right}
+.actions{display:grid;gap:8px}
+.actions .btn{padding:10px 12px}
+
+@media (max-width: 900px){
+  #play{top:calc(58px + env(safe-area-inset-top,0px))}
+}
+@media (max-width: 760px){
+  #panel{left:8px;right:8px;top:auto;bottom:calc(8px + env(safe-area-inset-bottom,0px));width:auto;max-height:60%;border-radius:14px}
+  .pv{padding:14px 16px 14px;gap:14px}
+  .pv h1{font-size:30px}
+  .sign{min-width:0}
+  .sign-in{padding:6px 16px 8px}
+  #zoom{top:auto;bottom:calc(120px + env(safe-area-inset-bottom,0px));transform:none}
+  #zoom button{width:38px;height:38px}
+  .r-verdict{font-size:21px}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+
+<div id="app">
+  <svg id="map" role="img" aria-label="{{MAPLABEL}}">
+    <rect id="sea" width="100%" height="100%"></rect>
+    <g id="world">
+      <path id="grat" class="grat"></path>
+      <path id="equator" class="equator"></path>
+      <g id="land"></g>
+      <path id="bk" class="bk"></path>
+      <path id="bp" class="bp"></path>
+      <path id="coast" class="coast"></path>
+      <path id="hlProv"></path>
+      <path id="hlTarget"></path>
+    </g>
+    <g id="overlay"></g>
+  </svg>
+
+  <div id="bar" data-dock="top" hidden>
+    <div class="brand"><span class="wm">{{TITLE}}</span><small id="barScope"></small></div>
+    <button class="btn" id="btnQuit" type="button">Change setup</button>
+  </div>
+
+  <div id="play" data-dock="top" hidden>
+    <div class="sign" id="sign" aria-live="polite">
+      <div class="sign-in">
+        <div class="sign-type" id="signType"></div>
+        <div class="sign-name" id="signName"></div>
+        <div class="sign-sub" id="signSub" hidden></div>
+      </div>
+    </div>
+    <div class="hud" id="hud"></div>
+  </div>
+
+  <div id="zoom" class="float" data-dock="right">
+    <button type="button" id="zIn" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" id="zOut" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button type="button" id="zFit" aria-label="Fit area to screen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+
+  <div id="result" class="float" data-dock="bottom" hidden aria-live="polite">
+    <div>
+      <div class="r-verdict" id="rVerdict"></div>
+      <div class="r-detail" id="rDetail"></div>
+    </div>
+    <div class="r-side">
+      <div class="r-pts" id="rPts"></div>
+      <button class="btn-primary" id="btnNext" type="button">Next</button>
+    </div>
+    <div class="r-bar"><i id="rBar"></i></div>
+  </div>
+
+  <div id="toast" role="status" hidden></div>
+  <div id="tip" hidden></div>
+
+  <aside id="panel" class="float" data-dock="side" aria-label="Game setup">
+    <section class="pv" id="setupView">
+      <nav class="games" aria-label="Games">
+        <a href="index.html" data-g="idn">Indonesia</a>
+        <a href="philippines.html" data-g="phl">Philippines</a>
+        <a href="area-codes.html" data-g="usa">US area codes</a>
+      </nav>
+      <div>
+        <h1>{{TITLE}}</h1>
+        <p class="lede">{{LEDE}}</p>
+      </div>
+      <div class="field">
+        <span class="lab">Area</span>
+        <div class="row2">
+          <select id="sel1"></select>
+          <select id="sel2"></select>
+        </div>
+        <p class="tip-line" id="areaTip"></p>
+      </div>
+      <div class="field">
+        <span class="lab" id="filterLab"></span>
+        <div class="seg" id="segFilter" role="group"></div>
+      </div>
+      <div class="field">
+        <span class="lab">Mode</span>
+        <div class="modes" id="modes" role="group" aria-label="Mode">
+          <button type="button" class="mode" data-v="score"><b>Score run</b><span>One click per {{NOUN}}. Up to 1,000 points, dropping the further off you are.</span></button>
+          <button type="button" class="mode" data-v="drill"><b>Drill</b><span>Clear every {{NOUN}} in the area. Three tries each, then it gets shown to you.</span></button>
+        </div>
+      </div>
+      <div class="field" id="roundsField">
+        <span class="lab">Rounds</span>
+        <div class="seg" id="segRounds" role="group" aria-label="Rounds">
+          <button type="button" data-v="5">5</button>
+          <button type="button" data-v="10">10</button>
+          <button type="button" data-v="20">20</button>
+          <button type="button" data-v="all">All</button>
+        </div>
+      </div>
+      <div class="scope" id="scopeBox"><strong id="scopeName"></strong><span id="scopeCount"></span><span id="scopeBest"></span></div>
+      <button class="btn-primary" id="btnStart" type="button">Start</button>
+      <p class="credit">{{CREDIT}}</p>
+    </section>
+    <section class="pv" id="endView" hidden></section>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script type="application/json" id="data">{{DATA}}</script>
+<script>
+{{GAME}}
+</script>
+<script>
+(() => {
+'use strict';
+const GAME = window.GAME;
+const $ = s => document.querySelector(s);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+document.querySelectorAll('.games a').forEach(a => { if (a.dataset.g === GAME.nav) a.setAttribute('aria-current', 'page'); });
+
+// ---------- data ----------
+const DATA = JSON.parse($('#data').textContent);
+const TOPO = DATA.topo, OBJ = TOPO.objects.k;
+const FEATS = topojson.feature(TOPO, OBJ).features;
+const FIDX = {};
+FEATS.forEach((f, i) => { f.id = i; FIDX[f.properties.k] = i; });
+const ITEMS = DATA.items.map((it, i) => Object.assign(it, { id: i, fs: it.f.map(k => FIDX[k]).filter(v => v != null) }));
+const FITEMS = FEATS.map(() => []);
+ITEMS.forEach(it => it.fs.forEach(fi => FITEMS[fi].push(it.id)));
+const L1 = new Map(GAME.levels[0].opts.map(o => [o.key, o]));
+const L2 = new Map(GAME.levels[1].opts.map(o => [o.key, o]));
+const short = GAME.short || (it => it.n);
+const FOPT = k => GAME.filter.opts.find(o => o.key === k) || GAME.filter.opts[0];
+const depthOf = c => FOPT(c.filter).depth || 2;
+const subOf = (it, c) => (FOPT(c.filter).noSub ? it.kind : it.s);
+
+const projection = GAME.projection().fitExtent([[0, 0], [1000, 1000]], { type: 'FeatureCollection', features: FEATS });
+const gp = d3.geoPath(projection);
+const FAREA = FEATS.map(f => gp.area(f));
+FEATS.forEach(f => {
+  const g = f.geometry;
+  let poly = g.coordinates;
+  if (g.type === 'MultiPolygon') {
+    let best = -1;
+    g.coordinates.forEach(c => { const a = gp.area({ type: 'Polygon', coordinates: c }); if (a > best) { best = a; poly = c; } });
+  }
+  f.lp = gp.centroid({ type: 'Polygon', coordinates: poly });
+});
+ITEMS.forEach(it => { const fi = it.fs.reduce((a, b) => (FAREA[b] > FAREA[a] ? b : a), it.fs[0]); it.lp = FEATS[fi].lp; });
+const FALLBACK = FEATS.map((f, i) => {
+  if (f.properties.lbl) return f.properties.lbl;
+  const own = FITEMS[i].map(j => ITEMS[j]).find(it => it.fs.length === 1);
+  return own ? short(own) + ' · ' + own.s : null;
+});
+
+// ---------- map drawing ----------
+const svg = d3.select('#map');
+const world = d3.select('#world');
+const overlay = d3.select('#overlay');
+const GR = GAME.graticule;
+if (GR) {
+  d3.select('#grat').attr('d', gp(d3.geoGraticule().extent(GR.ext).step([GR.step, GR.step])()));
+  if (GR.equator) d3.select('#equator').attr('d', gp({ type: 'LineString', coordinates: d3.range(GR.ext[0][0], GR.ext[1][0] + 0.5, 0.5).map(x => [x, 0]) }));
+}
+const landSel = d3.select('#land').selectAll('path').data(FEATS).join('path')
+  .attr('d', gp)
+  .attr('class', f => f.properties.w === 1 ? 'lake' : f.properties.w === 2 ? 'void' : null);
+const pathOf = id => landSel.nodes()[id];
+d3.select('#bk').attr('d', gp(topojson.mesh(TOPO, OBJ, (a, b) => a !== b && a.properties.g2 === b.properties.g2)));
+d3.select('#bp').attr('d', gp(topojson.mesh(TOPO, OBJ, (a, b) => a !== b && a.properties.g2 !== b.properties.g2)));
+d3.select('#coast').attr('d', gp(topojson.mesh(TOPO, OBJ, (a, b) => a === b)));
+const outlineOf = fids => gp(topojson.merge(TOPO, fids.map(i => OBJ.geometries[i])));
+const groupCache = {};
+const groupOutline = g2 => groupCache[g2] || (groupCache[g2] = outlineOf(FEATS.filter(f => f.properties.g2 === g2).map(f => f.id)));
+const fcOf = fids => ({ type: 'FeatureCollection', features: fids.map(i => FEATS[i]) });
+
+let T = d3.zoomIdentity;
+let pad = { t: 16, r: 16, b: 16, l: 16 };
+const zoom = d3.zoom().scaleExtent([0.1, 400]).clickDistance(6)
+  .on('zoom', ev => { T = ev.transform; world.attr('transform', T); drawOverlay(); });
+svg.call(zoom).on('dblclick.zoom', null);
+
+function measurePad() {
+  const W = innerWidth, H = innerHeight;
+  const p = { t: 16, r: 16, b: 16, l: 16 };
+  document.querySelectorAll('[data-dock]').forEach(el => {
+    if (el.hidden || !el.getClientRects().length) return;
+    const r = el.getBoundingClientRect();
+    let dock = el.dataset.dock;
+    if (dock === 'side') dock = r.width < W * 0.6 ? 'left' : 'bottom';
+    if (dock === 'top') p.t = Math.max(p.t, r.bottom + 10);
+    if (dock === 'bottom') p.b = Math.max(p.b, H - r.top + 10);
+    if (dock === 'left') p.l = Math.max(p.l, r.right + 10);
+    if (dock === 'right' && W > 760) p.r = Math.max(p.r, W - r.left + 6);
+  });
+  if (W - p.l - p.r < 160) { p.l = 12; p.r = 12; }
+  if (H - p.t - p.b < 140) { p.t = Math.min(p.t, H * 0.3); p.b = Math.min(p.b, H * 0.3); }
+  return p;
+}
+function transformFor(b, maxK) {
+  pad = measurePad();
+  const W = innerWidth, H = innerHeight;
+  const aw = W - pad.l - pad.r, ah = H - pad.t - pad.b;
+  const [[x0, y0], [x1, y1]] = b;
+  let k = 0.9 * Math.min(aw / Math.max(x1 - x0, 1e-6), ah / Math.max(y1 - y0, 1e-6));
+  k = clamp(k, 0.1, maxK || 120);
+  return d3.zoomIdentity.translate(pad.l + aw / 2 - k * (x0 + x1) / 2, pad.t + ah / 2 - k * (y0 + y1) / 2).scale(k);
+}
+function goTo(t, animate = true) {
+  if (animate && !reduceMotion) svg.transition().duration(650).ease(d3.easeCubicInOut).call(zoom.transform, t);
+  else svg.call(zoom.transform, t);
+}
+function fitScope(animate = true) {
+  const fids = featsOf(scopeItems(geoCfg()));
+  goTo(transformFor(gp.bounds(fcOf(fids.length ? fids : FEATS.map(f => f.id)))), animate);
+}
+function isVisible(b) {
+  const p = measurePad();
+  const [x0, y0] = T.apply(b[0]), [x1, y1] = T.apply(b[1]);
+  return x0 >= p.l && y0 >= p.t && x1 <= innerWidth - p.r && y1 <= innerHeight - p.b;
+}
+function showBounds(b, animate = true) {
+  if (isVisible(b)) return;
+  goTo(transformFor(b, Math.max(T.k, 1)), animate);
+}
+
+// overlay: pins, lines, labels drawn in screen space so they stay crisp at any zoom
+let ovItems = [];
+function drawOverlay() {
+  overlay.selectAll('*').remove();
+  const W = innerWidth, H = innerHeight;
+  if (GR) {
+    GR.lats.forEach(lat => {
+      const y = T.applyY(projection([GR.labelLon, lat])[1]);
+      if (y > pad.t + 6 && y < H - pad.b - 4) overlay.append('text').attr('class', 'coord').attr('x', pad.l + 4).attr('y', y - 5).text(GR.latLabel(lat));
+    });
+    for (let lon = GR.lons[0]; lon <= GR.lons[1]; lon += GR.step) {
+      const x = T.applyX(projection([lon, GR.labelLat])[0]);
+      if (x > pad.l + 40 && x < W - pad.r - 30) overlay.append('text').attr('class', 'coord').attr('x', x + 4).attr('y', H - 10).text(GR.lonLabel(lon));
+    }
+  }
+  ovItems.forEach(it => {
+    if (it.k === 'line') {
+      const [ax, ay] = T.apply(it.a), [bx, by] = T.apply(it.b);
+      overlay.append('line').attr('class', 'ov-line').attr('x1', ax).attr('y1', ay).attr('x2', bx).attr('y2', by);
+      overlay.append('circle').attr('class', 'ov-near').attr('cx', bx).attr('cy', by).attr('r', 3);
+    } else if (it.k === 'pin') {
+      const [x, y] = T.apply(it.p);
+      overlay.append('circle').attr('class', 'ov-pin').attr('cx', x).attr('cy', y).attr('r', 6.5);
+    } else if (it.k === 'label') {
+      const [x, y] = T.apply(it.p);
+      overlay.append('text').attr('class', 'lbl' + (it.muted ? ' muted' : '')).attr('x', x).attr('y', y + (it.dy || 0)).attr('text-anchor', 'middle').text(it.text);
+    }
+  });
+}
+
+// ---------- distance from a click to the nearest edge of a target ----------
+function nearest(ll, f) {
+  const [lon0, lat0] = ll;
+  const kx = 111.32 * Math.cos(lat0 * Math.PI / 180), ky = 110.57;
+  const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+  let best = Infinity, bp = ll;
+  for (const poly of polys) for (const ring of poly) for (let i = 0; i < ring.length - 1; i++) {
+    let ax = ring[i][0] - lon0, bx = ring[i + 1][0] - lon0;
+    if (ax > 180) ax -= 360; if (ax < -180) ax += 360; if (bx > 180) bx -= 360; if (bx < -180) bx += 360;
+    ax *= kx; bx *= kx;
+    const ay = (ring[i][1] - lat0) * ky, by = (ring[i + 1][1] - lat0) * ky;
+    const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+    const t = L ? clamp(-(ax * dx + ay * dy) / L, 0, 1) : 0;
+    const px = ax + t * dx, py = ay + t * dy, d = Math.hypot(px, py);
+    if (d < best) { best = d; bp = [lon0 + px / kx, lat0 + py / ky]; }
+  }
+  return { km: best, point: bp };
+}
+const projRingsCache = {};
+function projRings(fi) {
+  if (!projRingsCache[fi]) {
+    const g = FEATS[fi].geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates] : g.coordinates;
+    projRingsCache[fi] = polys.flatMap(poly => poly.map(r => r.map(c => projection(c)).filter(Boolean)));
+  }
+  return projRingsCache[fi];
+}
+function nearestItem(p, item) {
+  const ll = projection.invert(p);
+  if (ll && isFinite(ll[0]) && isFinite(ll[1])) {
+    let best = null;
+    item.fs.forEach(fi => { const r = nearest(ll, FEATS[fi]); if (!best || r.km < best.km) best = r; });
+    return { km: d3.geoDistance(ll, best.point) * 6371, px: projection(best.point) || p };
+  }
+  // click outside the projection's area (e.g. beyond the Albers USA insets): measure on screen, convert with local scale
+  let best = Infinity, bp = p;
+  item.fs.forEach(fi => projRings(fi).forEach(ring => {
+    for (let i = 0; i < ring.length - 1; i++) {
+      const [ax, ay] = ring[i], [bx, by] = ring[i + 1];
+      const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+      const t = L ? clamp(((p[0] - ax) * dx + (p[1] - ay) * dy) / L, 0, 1) : 0;
+      const qx = ax + t * dx, qy = ay + t * dy, d = Math.hypot(p[0] - qx, p[1] - qy);
+      if (d < best) { best = d; bp = [qx, qy]; }
+    }
+  }));
+  const bl = projection.invert(bp);
+  let km = best;
+  if (bl) {
+    const bl2 = [bl[0] + 0.1, bl[1]], p2 = projection(bl2);
+    if (p2) km = best / (Math.hypot(p2[0] - bp[0], p2[1] - bp[1]) / (d3.geoDistance(bl, bl2) * 6371));
+  }
+  return { km, px: bp };
+}
+
+// ---------- config ----------
+const DEFAULT_CFG = { g1: 'all', g2: 'all', filter: GAME.filter.def, mode: 'score', rounds: 10 };
+let saved = store.get(GAME.id + '.cfg', {});
+if (saved && saved.isl) saved = { g1: saved.isl, g2: saved.prov, filter: saved.types, mode: saved.mode, rounds: saved.rounds };
+let cfg = Object.assign({}, DEFAULT_CFG, saved || {});
+function validCfg(c) {
+  if (c.g1 !== 'all' && !L1.has(c.g1)) c.g1 = 'all';
+  if (c.g2 !== 'all' && !L2.has(c.g2)) c.g2 = 'all';
+  if (!GAME.filter.opts.some(o => o.key === c.filter)) c.filter = GAME.filter.def;
+  if (!['score', 'drill'].includes(c.mode)) c.mode = 'score';
+  if (![5, 10, 20, 'all'].includes(c.rounds)) c.rounds = 10;
+  return c;
+}
+validCfg(cfg);
+const geoCfg = () => (G ? G.cfg : cfg);
+function scopeItems(c) {
+  const deep = depthOf(c) >= 2;
+  return ITEMS.filter(it => GAME.filter.test(it, c.filter) && (c.g1 === 'all' || it.g1 === c.g1) && (!deep || c.g2 === 'all' || it.g2 === c.g2));
+}
+function featsOf(items) { const s = new Set(); items.forEach(it => it.fs.forEach(fi => s.add(fi))); return [...s]; }
+function scopeName(c) {
+  if (depthOf(c) >= 2 && c.g2 !== 'all') return L2.get(c.g2).name;
+  if (c.g1 !== 'all') return L1.get(c.g1).name;
+  return GAME.levels[0].all;
+}
+const bestKey = c => [GAME.id + '.best', c.mode, c.g1, c.g2, c.filter, c.mode === 'score' ? c.rounds : ''].join('|');
+
+// ---------- UI: setup ----------
+const sel1 = $('#sel1'), sel2 = $('#sel2');
+sel1.setAttribute('aria-label', GAME.levels[0].label);
+sel2.setAttribute('aria-label', GAME.levels[1].label);
+sel1.innerHTML = `<option value="all">${esc(GAME.levels[0].all)}</option>` + GAME.levels[0].opts.map(o => `<option value="${esc(o.key)}">${esc(o.name)}</option>`).join('');
+$('#filterLab').textContent = GAME.filter.label;
+$('#segFilter').setAttribute('aria-label', GAME.filter.label);
+$('#segFilter').innerHTML = GAME.filter.opts.map(o => `<button type="button" data-v="${esc(o.key)}">${esc(o.label)}</button>`).join('');
+function fillSel2() {
+  const groups = cfg.g1 === 'all' ? GAME.levels[0].opts : [L1.get(cfg.g1)];
+  const opt = o => `<option value="${esc(o.key)}">${esc(o.name)}</option>`;
+  sel2.innerHTML = `<option value="all">${esc(GAME.levels[1].all)}</option>` + groups.map(g => {
+    const os = GAME.levels[1].opts.filter(o => o.parent === g.key).map(opt).join('');
+    return cfg.g1 === 'all' ? `<optgroup label="${esc(g.name)}">${os}</optgroup>` : os;
+  }).join('');
+  sel2.value = cfg.g2;
+}
+sel1.addEventListener('change', () => {
+  cfg.g1 = sel1.value;
+  if (cfg.g2 !== 'all' && L2.get(cfg.g2).parent !== cfg.g1) cfg.g2 = 'all';
+  syncSetup(true);
+});
+sel2.addEventListener('change', () => {
+  cfg.g2 = sel2.value;
+  if (cfg.g2 !== 'all') cfg.g1 = L2.get(cfg.g2).parent;
+  syncSetup(true);
+});
+function bindSeg(el, key, parse, refit) {
+  el.addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    cfg[key] = parse ? parse(b.dataset.v) : b.dataset.v;
+    syncSetup(refit);
+  });
+}
+bindSeg($('#segFilter'), 'filter', null, true);
+bindSeg($('#modes'), 'mode');
+bindSeg($('#segRounds'), 'rounds', v => (v === 'all' ? 'all' : +v));
+function pressed(el, v) { el.querySelectorAll('button[data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(v)))); }
+function clock(s) { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+function syncSetup(refit) {
+  sel1.value = cfg.g1; fillSel2();
+  const deep = depthOf(cfg) >= 2;
+  sel2.hidden = !deep;
+  $('#areaTip').textContent = deep ? `Or click any ${GAME.levels[1].noun} on the map to practise just that one.` : `Or click the map to practise one ${GAME.levels[0].noun}.`;
+  pressed($('#segFilter'), cfg.filter); pressed($('#modes'), cfg.mode); pressed($('#segRounds'), cfg.rounds);
+  $('#roundsField').hidden = cfg.mode !== 'score';
+  const items = scopeItems(cfg);
+  $('#scopeName').textContent = scopeName(cfg);
+  $('#scopeCount').textContent = items.length ? GAME.count(items, cfg) : 'Nothing to find here';
+  const best = store.get(bestKey(cfg), null);
+  const n = cfg.rounds === 'all' ? items.length : Math.min(cfg.rounds, items.length);
+  $('#scopeBest').textContent = cfg.mode === 'score'
+    ? (best != null ? `Best: ${fmt(best)} / ${fmt(n * 1000)}` : `${n} rounds, ${fmt(n * 1000)} points max`)
+    : (best ? `Best: ${best.acc}% first try in ${clock(best.secs)}` : `${items.length} to clear`);
+  $('#btnStart').disabled = !items.length;
+  store.set(GAME.id + '.cfg', cfg);
+  paintScope(items);
+  if (refit) fitScope();
+}
+function paintScope(items) {
+  const set = new Set(featsOf(items));
+  landSel.classed('in', f => set.has(f.id));
+}
+
+// ---------- game ----------
+let G = null;
+let SCOPE = new Set();
+let phase = 'setup';
+function setPhase(p) {
+  phase = p;
+  document.body.className = 'ph-' + p + (matchMedia('(hover: hover)').matches ? ' hover' : '');
+  $('#bar').hidden = p === 'setup' || p === 'end';
+  $('#play').hidden = !(p === 'guess' || p === 'reveal');
+  $('#panel').hidden = !(p === 'setup' || p === 'end');
+  $('#setupView').hidden = p !== 'setup';
+  $('#endView').hidden = p !== 'end';
+  if (p !== 'reveal') $('#result').hidden = true;
+  $('#panel').scrollTop = 0;
+  hideTip();
+}
+function scaleKm(items) {
+  const [[w, s], [e, n]] = d3.geoBounds(fcOf(featsOf(items)));
+  const spanLon = e >= w ? e - w : e + 360 - w;
+  const d = d3.geoDistance([0, s], [Math.min(spanLon, 179), n]) * 6371;
+  return clamp(d / 25, 12, 160);
+}
+function itemsAt(fi, c) { return FITEMS[fi].map(i => ITEMS[i]).filter(it => GAME.filter.test(it, c.filter)); }
+function featDesc(f, c) {
+  if (!f) return null;
+  const its = itemsAt(f.id, c);
+  if (its.length > 1) return 'the ' + its.map(short).join('/') + ' area';
+  if (its.length === 1) return short(its[0]);
+  return FALLBACK[f.id];
+}
+function featTip(f, c) {
+  const its = itemsAt(f.id, c);
+  if (its.length > 1) return its.map(short).join(' · ') + ' · ' + subOf(its[0], c);
+  if (its.length === 1) return short(its[0]) + ' · ' + subOf(its[0], c);
+  return FALLBACK[f.id];
+}
+function startGame(queue) {
+  const c = Object.assign({}, cfg);
+  const items = scopeItems(c);
+  if (!items.length) return;
+  let ids = queue || shuffle(items.map(it => it.id));
+  if (!queue && c.mode === 'score' && c.rounds !== 'all') ids = ids.slice(0, c.rounds);
+  G = { cfg: c, queue: ids, idx: 0, score: 0, results: [], tries: 0, revealed: false, hint: false, solved: {}, featCls: {},
+        scopeIds: items.map(it => it.id), scale: scaleKm(items), t0: Date.now(), retry: !!queue };
+  SCOPE = new Set(G.scopeIds);
+  clearMarks(true);
+  paintScope(items);
+  $('#barScope').textContent = scopeName(c) + ' · ' + (c.mode === 'score' ? 'Score run' : 'Drill');
+  setPhase('guess');
+  showPrompt();
+  fitScope();
+}
+function current() { return ITEMS[G.queue[G.idx]]; }
+function showPrompt() {
+  const it = current();
+  $('#signType').textContent = it.kind;
+  $('#signName').textContent = it.n;
+  $('#signSub').textContent = it.s;
+  $('#signSub').hidden = !G.hint;
+  const sign = $('#sign'); sign.classList.remove('swap'); void sign.offsetWidth; sign.classList.add('swap');
+  updateHud();
+}
+function canHint() { return G.cfg.mode === 'score' && depthOf(G.cfg) >= 2 && G.cfg.g2 === 'all'; }
+function updateHud() {
+  const hud = $('#hud');
+  if (!G) { hud.innerHTML = ''; return; }
+  if (G.cfg.mode === 'score') {
+    hud.innerHTML = `<span class="chip">Round <b>${Math.min(G.idx + 1, G.queue.length)}</b> / ${G.queue.length}</span>`
+      + `<span class="chip"><b>${fmt(G.score)}</b> pts</span>`
+      + (canHint() && phase === 'guess' && !G.hint ? `<button type="button" class="chip" id="btnHint">${esc(GAME.hint)} (half points)</button>` : '');
+    const h = $('#btnHint'); if (h) h.onclick = useHint;
+  } else {
+    const done = G.results.length, first = G.results.filter(r => r.tries === 1).length;
+    hud.innerHTML = `<span class="chip"><b>${done}</b> / ${G.queue.length} done</span>`
+      + `<span class="chip">First try <b>${done ? Math.round(100 * first / done) : 100}%</b></span>`
+      + `<span class="chip" id="clock">${clock((Date.now() - G.t0) / 1000)}</span>`
+      + (G.revealed ? '' : '<button type="button" class="chip" id="btnGive">Show me</button>');
+    const g = $('#btnGive'); if (g) g.onclick = () => revealDrill(null);
+  }
+}
+setInterval(() => { const c = $('#clock'); if (c && G && phase === 'guess') c.textContent = clock((Date.now() - G.t0) / 1000); }, 1000);
+
+function useHint() {
+  if (!G || phase !== 'guess' || G.hint || !canHint()) return;
+  G.hint = true;
+  const it = current();
+  $('#signSub').hidden = false;
+  if (it.g2) d3.select('#hlProv').attr('d', groupOutline(it.g2));
+  updateHud();
+}
+function setFeatCls(fi, cls) {
+  const el = pathOf(fi);
+  el.classList.remove('s1', 's2', 's3', 'sx', 'pulse', 'flash');
+  if (cls) el.classList.add(cls);
+}
+function clearMarks(all) {
+  landSel.classed('t-hit t-miss c-wrong flash pulse', false);
+  if (all) landSel.classed('s1 s2 s3 sx', false);
+  d3.select('#hlProv').attr('d', null);
+  d3.select('#hlTarget').attr('d', null);
+  ovItems = []; drawOverlay();
+}
+
+// score run: one click, scored by distance to the target's nearest edge
+function scoreGuess(ev, f) {
+  const [x, y] = d3.pointer(ev, world.node());
+  const tgt = current();
+  const hit = !!(f && tgt.fs.includes(f.id));
+  let km = 0, nearPt = null;
+  if (!hit) { const r = nearestItem([x, y], tgt); km = r.km; nearPt = r.px; }
+  let pts = hit ? 1000 : Math.round(800 * Math.exp(-km / G.scale));
+  if (G.hint) pts = Math.round(pts / 2);
+  const clicked = f && !f.properties.w ? f : null;
+  G.results.push({ id: tgt.id, km, pts, hint: G.hint });
+  G.score += pts;
+  setPhase('reveal');
+
+  tgt.fs.forEach(fi => pathOf(fi).classList.add(hit ? 't-hit' : 't-miss'));
+  const cItems = clicked ? itemsAt(clicked.id, G.cfg) : [];
+  if (clicked && !hit) {
+    const wrongFs = cItems.length === 1 ? cItems[0].fs : [clicked.id];
+    wrongFs.filter(fi => !tgt.fs.includes(fi)).forEach(fi => pathOf(fi).classList.add('c-wrong'));
+  }
+  d3.select('#hlTarget').attr('d', outlineOf(tgt.fs));
+  ovItems = [];
+  if (!hit) ovItems.push({ k: 'line', a: [x, y], b: nearPt });
+  ovItems.push({ k: 'pin', p: [x, y] });
+  ovItems.push({ k: 'label', p: tgt.lp, text: short(tgt), dy: -4 });
+  const cDesc = featDesc(clicked, G.cfg);
+  if (clicked && !hit && cDesc) {
+    const lp = cItems.length === 1 ? cItems[0].lp : clicked.lp;
+    ovItems.push({ k: 'label', p: lp, text: cItems.length > 1 ? cItems.map(short).join(' · ') : (cItems.length ? short(cItems[0]) : cDesc.split(' · ')[0]), muted: true, dy: -4 });
+  }
+
+  const noSub = FOPT(G.cfg.filter).noSub;
+  const verdict = hit ? GAME.hitText : pts >= 450 ? 'Close.' : pts >= 150 ? 'Right neighbourhood.' : 'Way off.';
+  const cSub = cItems.length ? cItems[0].s : null;
+  const where = clicked && cDesc ? `You clicked <b>${esc(cDesc)}</b>${cSub && cSub !== tgt.s && !noSub ? ` in ${esc(cSub)}` : ''}.` : esc(GAME.sea);
+  const dist = ` ${esc(short(tgt))} is <b>${km < 1 ? 'under 1' : fmt(km)} km</b> away.`;
+  const extra = tgt.x ? ' ' + esc(tgt.x) : '';
+  $('#rVerdict').textContent = verdict;
+  $('#rDetail').innerHTML = hit
+    ? `${esc(short(tgt))}${noSub ? '' : ', ' + esc(tgt.s)}.${extra}`
+    : where + dist + (noSub ? '' : ` It's in ${esc(tgt.s)}.`) + extra;
+  $('#rPts').textContent = '+' + fmt(pts);
+  $('#btnNext').textContent = G.idx + 1 >= G.queue.length ? 'See results' : 'Next';
+  const bar = $('#rBar'); bar.style.width = '0'; bar.style.background = hit ? 'var(--good)' : pts >= 150 ? 'var(--border-prov)' : 'var(--bad)';
+  $('#result').hidden = false;
+  requestAnimationFrame(() => { bar.style.width = (pts / 10) + '%'; });
+  updateHud();
+  const b = gp.bounds(fcOf(tgt.fs));
+  const ub = [[Math.min(b[0][0], x), Math.min(b[0][1], y)], [Math.max(b[1][0], x), Math.max(b[1][1], y)]];
+  showBounds(ub);
+  drawOverlay();
+  setTimeout(() => $('#btnNext').focus({ preventScroll: true }), 30);
+}
+function nextRound() {
+  if (!G || phase !== 'reveal') return;
+  clearMarks(false);
+  G.idx++; G.hint = false;
+  if (G.idx >= G.queue.length) return endGame();
+  setPhase('guess');
+  showPrompt();
+  fitScope();
+}
+
+// drill: keep clicking until you find it, colour by tries
+function drillGuess(f) {
+  if (!f || f.properties.w) return;
+  const tgt = current();
+  if (tgt.fs.includes(f.id)) {
+    const cls = G.revealed ? 'sx' : ['s1', 's2', 's3'][G.tries];
+    G.solved[tgt.id] = cls;
+    G.results.push({ id: tgt.id, tries: G.revealed ? 4 : G.tries + 1 });
+    tgt.fs.forEach(fi => { G.featCls[fi] = cls; setFeatCls(fi, cls); });
+    hideToast();
+    G.idx++; G.tries = 0; G.revealed = false;
+    if (G.idx >= G.queue.length) return endGame();
+    showPrompt();
+    return;
+  }
+  const here = FITEMS[f.id].filter(i => SCOPE.has(i));
+  const desc = featDesc(f, G.cfg) || 'That';
+  if (!here.length) { toast(`${desc} isn't in this set.`); return; }
+  if (here.every(i => G.solved[i])) { toast(`${desc} is already done.`); return; }
+  if (G.revealed) { flash(f); toast(`That's ${desc}. Click the flashing one.`); return; }
+  G.tries++;
+  flash(f);
+  if (G.tries >= 3) revealDrill(f);
+  else toast(`That's ${desc}. ${3 - G.tries} ${3 - G.tries === 1 ? 'try' : 'tries'} left.`);
+}
+function revealDrill(wrongF) {
+  if (!G || G.revealed || phase !== 'guess') return;
+  const tgt = current();
+  G.revealed = true;
+  tgt.fs.forEach(fi => pathOf(fi).classList.add('pulse'));
+  toast((wrongF ? `That's ${featDesc(wrongF, G.cfg)}. ` : '') + `${short(tgt)} is the flashing one. Click it to carry on.`, 6000);
+  showBounds(gp.bounds(fcOf(tgt.fs)));
+  updateHud();
+}
+function flash(f) { const el = pathOf(f.id); el.classList.remove('flash'); void el.getBBox(); el.classList.add('flash'); }
+
+let toastTimer = null;
+function toast(msg, ms = 2600) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(hideToast, ms);
+}
+function hideToast() { $('#toast').hidden = true; }
+
+// ---------- end ----------
+function endGame() {
+  const secs = (Date.now() - G.t0) / 1000;
+  setPhase('end');
+  hideToast();
+  clearMarks(true);
+  const c = G.cfg, key = bestKey(c), view = $('#endView');
+  const fl = FOPT(c.filter);
+  const nm = scopeName(c) + (fl.key === GAME.filter.def ? '' : ' · ' + fl.label.toLowerCase());
+  let html = `<div><span class="lab">${esc(nm)}</span><h2 style="margin-top:6px">${c.mode === 'score' ? 'Score run done' : 'Drill done'}</h2></div>`;
+  const rows = [];
+  if (c.mode === 'score') {
+    const max = G.queue.length * 1000;
+    const prev = store.get(key, null);
+    const isBest = !G.retry && (prev == null || G.score > prev);
+    if (isBest) store.set(key, G.score);
+    G.results.forEach(r => { const cls = r.pts >= 800 ? 's1' : r.pts >= 300 ? 's2' : r.pts > 0 ? 's3' : 'sx'; ITEMS[r.id].fs.forEach(fi => setFeatCls(fi, cls)); r.cls = cls; });
+    const exact = G.results.filter(r => r.km === 0).length;
+    const avgKm = G.results.reduce((s, r) => s + r.km, 0) / G.results.length;
+    html += `<div class="big">${fmt(G.score)} <small>/ ${fmt(max)}</small></div>`;
+    html += `<div class="stats"><div class="stat"><b>${exact}</b><span>exact</span></div><div class="stat"><b>${fmt(avgKm)}</b><span>avg km off</span></div><div class="stat"><b>${G.results.filter(r => r.hint).length}</b><span>hints</span></div><div class="stat"><b>${isBest ? 'New' : fmt(prev ?? G.score)}</b><span>${isBest ? 'best!' : 'best'}</span></div></div>`;
+    G.results.forEach(r => rows.push({ id: r.id, cls: r.cls, km: r.km === 0 ? 'exact' : (r.km < 1 ? '<1' : fmt(r.km)) + ' km', pt: fmt(r.pts) }));
+  } else {
+    const n = G.results.length, by = t => G.results.filter(r => r.tries === t).length;
+    const acc = Math.round(100 * by(1) / n);
+    const prev = store.get(key, null);
+    const isBest = !G.retry && (!prev || acc > prev.acc || (acc === prev.acc && secs < prev.secs));
+    if (isBest) store.set(key, { acc, secs: Math.round(secs) });
+    Object.entries(G.featCls).forEach(([fi, cls]) => setFeatCls(+fi, cls));
+    html += `<div class="big">${acc}% <small>first try · ${clock(secs)}</small></div>`;
+    html += `<div class="stats"><div class="stat"><b>${by(1)}</b><span><i class="dot d1"></i> 1st try</span></div><div class="stat"><b>${by(2)}</b><span><i class="dot d2"></i> 2nd</span></div><div class="stat"><b>${by(3)}</b><span><i class="dot d3"></i> 3rd</span></div><div class="stat"><b>${by(4)}</b><span><i class="dot dx"></i> shown</span></div></div>`;
+    if (isBest) html += '<p class="tip-line">New best for this area.</p>';
+    G.results.filter(r => r.tries > 1).sort((a, b) => b.tries - a.tries)
+      .forEach(r => rows.push({ id: r.id, cls: G.solved[r.id], km: r.tries === 4 ? 'shown' : r.tries + ' tries', pt: '' }));
+  }
+  const misses = c.mode === 'drill' ? G.results.filter(r => r.tries > 1).map(r => r.id) : G.results.filter(r => r.km > 0).map(r => r.id);
+  if (rows.length) {
+    html += `<div class="field"><span class="lab">${c.mode === 'score' ? 'Rounds · tap to look' : 'Needed more than one try · tap to look'}</span><ul class="rounds">`
+      + rows.map(r => `<li><button type="button" data-id="${r.id}"><i class="dot ${'d' + r.cls.slice(1)}"></i><span class="nm">${esc(short(ITEMS[r.id]))}</span><span class="km">${r.km}</span><span class="pt">${r.pt}</span></button></li>`).join('')
+      + '</ul></div>';
+  } else if (c.mode === 'drill') {
+    html += '<p class="tip-line">Every one on the first try. Clean sweep.</p>';
+  }
+  html += '<div class="actions">';
+  if (misses.length) html += `<button class="btn-primary" type="button" id="btnRetry">Retry the ${misses.length} you missed</button>`;
+  html += `<button class="${misses.length ? 'btn' : 'btn-primary'}" type="button" id="btnAgain">Play again</button><button class="btn" type="button" id="btnSetup">Change setup</button></div>`;
+  html += '<p class="tip-line">Hover or tap the map to see any name.</p>';
+  view.innerHTML = html;
+  view.querySelectorAll('.rounds button').forEach(b => b.addEventListener('click', () => {
+    const it = ITEMS[+b.dataset.id];
+    d3.select('#hlTarget').attr('d', outlineOf(it.fs));
+    ovItems = [{ k: 'label', p: it.lp, text: short(it), dy: -4 }];
+    goTo(transformFor(gp.bounds(fcOf(it.fs)), 24));
+  }));
+  const r = $('#btnRetry');
+  if (r) r.onclick = () => { cfg = Object.assign({}, G.cfg); startGame(shuffle(misses)); };
+  $('#btnAgain').onclick = () => { cfg = Object.assign({}, G.cfg); startGame(); };
+  $('#btnSetup').onclick = toSetup;
+  fitScope();
+  (r || $('#btnAgain')).focus({ preventScroll: true });
+}
+function toSetup() {
+  if (G) cfg = Object.assign({}, G.cfg);
+  G = null;
+  clearMarks(true);
+  setPhase('setup');
+  syncSetup(true);
+}
+let quitArmed = null;
+$('#btnQuit').addEventListener('click', () => {
+  const b = $('#btnQuit');
+  if (quitArmed) { clearTimeout(quitArmed); quitArmed = null; b.textContent = 'Change setup'; toSetup(); return; }
+  b.textContent = 'Quit this game?';
+  quitArmed = setTimeout(() => { quitArmed = null; b.textContent = 'Change setup'; }, 3000);
+});
+
+// ---------- input ----------
+const landFeat = el => (el && el.parentNode && el.parentNode.id === 'land' ? el.__data__ : null);
+function setupGroup(f) {
+  const P = f.properties;
+  if (P.w) return null;
+  if (depthOf(cfg) >= 2 && P.g2 && L2.has(P.g2)) return { lvl: 2, key: P.g2, name: L2.get(P.g2).name };
+  if (P.g1 && L1.has(P.g1)) return { lvl: 1, key: P.g1, name: L1.get(P.g1).name };
+  return null;
+}
+const tip = $('#tip');
+let hoverGroup = null, tipTimer = null;
+svg.on('click', ev => {
+  const f = landFeat(ev.target);
+  if (phase === 'setup') {
+    const g = f && setupGroup(f);
+    if (g) {
+      if (g.lvl === 2) { cfg.g2 = g.key; cfg.g1 = L2.get(g.key).parent; } else { cfg.g1 = g.key; cfg.g2 = 'all'; }
+      syncSetup(true);
+    }
+    return;
+  }
+  if (phase === 'reveal' || phase === 'end') {
+    const txt = f && tipText(f);
+    if (txt) { tipAt(ev.clientX, ev.clientY, txt); clearTimeout(tipTimer); tipTimer = setTimeout(() => { tip.hidden = true; }, 2200); }
+    return;
+  }
+  if (phase !== 'guess') return;
+  if (G.cfg.mode === 'score') scoreGuess(ev, f); else drillGuess(f);
+});
+function tipAt(x, y, txt) {
+  tip.textContent = txt; tip.hidden = false;
+  const w = tip.offsetWidth;
+  tip.style.left = Math.min(x, innerWidth - w - 28) + 'px';
+  tip.style.top = y + 'px';
+}
+function hideTip() { tip.hidden = true; setHoverGroup(null); }
+function setHoverGroup(g) {
+  const key = g ? g.lvl + ':' + g.key : null;
+  if (key === hoverGroup) return;
+  hoverGroup = key;
+  landSel.classed('ph', f => !!g && !f.properties.w && (g.lvl === 2 ? f.properties.g2 === g.key : f.properties.g1 === g.key));
+}
+function tipText(f) {
+  if (!f) return null;
+  if (phase === 'setup') { const g = setupGroup(f); return g ? `${g.name} · click to practise` : null; }
+  const c = geoCfg();
+  if (phase === 'reveal' || phase === 'end') return featTip(f, c);
+  if (phase === 'guess' && G && G.cfg.mode === 'drill') {
+    const solved = FITEMS[f.id].filter(i => G.solved[i]).map(i => short(ITEMS[i]));
+    return solved.length ? solved.join(' · ') : null;
+  }
+  return null;
+}
+svg.on('pointermove', ev => {
+  if (ev.pointerType !== 'mouse' || ev.buttons) { tip.hidden = true; return; }
+  const f = landFeat(ev.target);
+  setHoverGroup(phase === 'setup' && f ? setupGroup(f) : null);
+  const txt = tipText(f);
+  if (!txt) { tip.hidden = true; return; }
+  clearTimeout(tipTimer);
+  tipAt(ev.clientX, ev.clientY, txt);
+});
+svg.on('pointerleave', hideTip);
+
+$('#zIn').onclick = () => svg.transition().duration(reduceMotion ? 0 : 250).call(zoom.scaleBy, 1.8);
+$('#zOut').onclick = () => svg.transition().duration(reduceMotion ? 0 : 250).call(zoom.scaleBy, 1 / 1.8);
+$('#zFit').onclick = () => fitScope();
+$('#btnNext').onclick = nextRound;
+$('#btnStart').onclick = () => startGame();
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('select')) return;
+  if (phase === 'reveal' && (e.key === 'Enter' || e.key === ' ') && e.target.id !== 'btnNext') { e.preventDefault(); nextRound(); }
+  else if (phase === 'guess' && (e.key === 'h' || e.key === 'H')) useHint();
+  else if (e.key === '+' || e.key === '=') $('#zIn').click();
+  else if (e.key === '-') $('#zOut').click();
+  else if (e.key === '0') fitScope();
+});
+let rz = null;
+addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (phase !== 'reveal') fitScope(false); else drawOverlay(); }, 150); });
+
+// ---------- boot (keeps a game in progress across page updates) ----------
+function start(data) {
+  data = data || {};
+  if (data.cfg) cfg = validCfg(Object.assign({}, DEFAULT_CFG, data.cfg));
+  setPhase('setup');
+  syncSetup(false);
+  fitScope(false);
+  const g = data.G;
+  if (g && (data.phase === 'guess' || data.phase === 'reveal') && Array.isArray(g.queue) && g.queue.every(i => ITEMS[i])) {
+    G = g;
+    G.featCls = G.featCls || {}; G.solved = G.solved || {};
+    if (data.phase === 'reveal') { G.idx++; G.hint = false; }
+    G.tries = 0; G.revealed = false;
+    if (G.idx >= G.queue.length) G.idx = G.queue.length - 1;
+    SCOPE = new Set(G.scopeIds);
+    paintScope(scopeItems(G.cfg));
+    Object.entries(G.featCls).forEach(([fi, cls]) => setFeatCls(+fi, cls));
+    $('#barScope').textContent = scopeName(G.cfg) + ' · ' + (G.cfg.mode === 'score' ? 'Score run' : 'Drill');
+    setPhase('guess'); showPrompt(); fitScope(false);
+  }
+}
+const hot = window.claude && window.claude.hot;
+if (hot && hot.snapshot) hot.snapshot(() => ({ cfg, phase, G }));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (phase === 'setup') fitScope(false); });
+hot && hot.ready ? hot.ready(start) : start((hot && hot.data) || {});
+})();
+</script>
