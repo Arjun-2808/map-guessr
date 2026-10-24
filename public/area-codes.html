@@ -184,6 +184,43 @@ select{width:100%;min-width:0;padding:8px 10px;border-radius:8px;border:1px soli
 .actions{display:grid;gap:8px}
 .actions .btn{padding:10px 12px}
 
+/* ---------- accounts & leaderboards ---------- */
+input{font:inherit;color:inherit;width:100%;min-width:0;padding:9px 10px;border-radius:8px;border:1px solid var(--rule);background:var(--panel-2);font-size:15px}
+.linkbtn{background:none;border:0;padding:0;font:600 13.5px var(--f-body);color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.acct{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-top:-4px}
+.acct > span{margin-right:auto}
+.acct b{color:var(--ink);font-weight:600}
+.daily{background:var(--sign);color:var(--sign-ink);border-radius:10px;padding:4px;box-shadow:var(--shadow)}
+.daily-in{border:2px solid var(--sign-ink);border-radius:7px;padding:10px 12px 12px;display:grid;gap:7px}
+.daily-top{display:flex;justify-content:space-between;gap:8px;font:600 13px/1 var(--f-display);letter-spacing:.18em;text-transform:uppercase}
+.daily p{margin:0;font-size:14px;line-height:1.35}
+.daily b{font-weight:600}
+.sign-btn{justify-self:start;background:var(--sign-ink);color:var(--sign);border:0;border-radius:6px;padding:8px 12px;font:600 15px/1 var(--f-display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.sign-btn:hover{opacity:.92}
+.sign-btn:focus-visible{outline-color:var(--sign-ink)}
+.lb-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.board{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--rule);font-variant-numeric:tabular-nums}
+.board li{display:grid;grid-template-columns:2.4em minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--rule);font-size:14px}
+.board .rk{color:var(--muted);font-weight:600}
+.board li:nth-child(-n+3) .rk{color:var(--ink)}
+.board .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .sc{font-weight:600}
+.board li.me{background:var(--panel-2)}
+.board li.me .nm{font-weight:600}
+.board li.gap{border-top:1px dashed var(--muted)}
+.board li.empty{display:block;color:var(--muted);padding:10px 4px}
+.rankline{margin:0;font-size:14px;line-height:1.45}
+.rankline b{font-weight:600}
+.rankline.bad{color:var(--bad)}
+.bv-head{display:flex;justify-content:space-between;align-items:center}
+.modal-back{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--sea) 55%,transparent);backdrop-filter:blur(2px)}
+.modal{width:min(380px,100%);background:var(--panel);border:1px solid var(--rule);border-radius:12px;box-shadow:var(--shadow);padding:18px 20px 16px;display:grid;gap:12px}
+.modal-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.modal h2{font:700 26px/1 var(--f-display);letter-spacing:.03em;text-transform:uppercase;margin:0}
+.x{background:none;border:0;font-size:26px;line-height:1;color:var(--muted);cursor:pointer;padding:0 4px}
+.fld{display:grid;gap:5px}
+.err{margin:0;color:var(--bad);font-size:13.5px}
+
 @media (max-width: 900px){
   #play{top:calc(58px + env(safe-area-inset-top,0px))}
 }
@@ -265,10 +302,12 @@ select{width:100%;min-width:0;padding:8px 10px;border-radius:8px;border:1px soli
         <a href="philippines.html" data-g="phl">Philippines</a>
         <a href="area-codes.html" data-g="usa">US area codes</a>
       </nav>
+      <div class="acct" id="acct" hidden></div>
       <div>
         <h1>Area Code Guessr</h1>
         <p class="lede">An area code appears on the sign. Find where it rings on a blank map of the US.</p>
       </div>
+      <div class="daily" id="daily" hidden></div>
       <div class="field">
         <span class="lab">Area</span>
         <div class="row2">
@@ -299,10 +338,28 @@ select{width:100%;min-width:0;padding:8px 10px;border-radius:8px;border:1px soli
       </div>
       <div class="scope" id="scopeBox"><strong id="scopeName"></strong><span id="scopeCount"></span><span id="scopeBest"></span></div>
       <button class="btn-primary" id="btnStart" type="button">Start</button>
+      <div class="field" id="lbPrev" hidden>
+        <div class="lb-head"><span class="lab">Top players · this setup</span><button class="linkbtn" id="lbOpen" type="button">Full leaderboard</button></div>
+        <ol class="board" id="lbPrevList"></ol>
+        <p class="tip-line" id="lbPrevNote"></p>
+      </div>
       <p class="credit">Boundaries: HIFLD/HSIP 2010 area code polygons (public domain), with later overlays matched through the NANPA database via <a href="https://github.com/benaduggan/area-code-map" target="_blank" rel="noopener">area-code-map</a>. Puerto Rico and other territories aren't shown.</p>
     </section>
     <section class="pv" id="endView" hidden></section>
+    <section class="pv" id="boardView" hidden></section>
   </aside>
+
+  <div class="modal-back" id="authModal" hidden>
+    <form class="modal" id="authForm" role="dialog" aria-modal="true" aria-labelledby="authTitle" novalidate>
+      <div class="modal-head"><h2 id="authTitle">Sign in</h2><button type="button" class="x" id="authClose" aria-label="Close">&times;</button></div>
+      <p class="tip-line" id="authLede"></p>
+      <label class="fld"><span class="lab">Username</span><input id="authUser" name="username" autocomplete="username" maxlength="20" autocapitalize="none" spellcheck="false" required></label>
+      <label class="fld"><span class="lab">Password</span><input id="authPass" name="password" type="password" autocomplete="current-password" maxlength="200" required></label>
+      <p class="err" id="authErr" role="alert" hidden></p>
+      <button class="btn-primary" id="authSubmit" type="submit">Sign in</button>
+      <p class="tip-line"><span id="authSwitchText"></span> <button type="button" class="linkbtn" id="authSwitch"></button></p>
+    </form>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
@@ -618,6 +675,7 @@ function syncSetup(refit) {
   $('#btnStart').disabled = !items.length;
   store.set(GAME.id + '.cfg', cfg);
   paintScope(items);
+  refreshPreview();
   if (refit) fitScope();
 }
 function paintScope(items) {
@@ -632,11 +690,12 @@ let phase = 'setup';
 function setPhase(p) {
   phase = p;
   document.body.className = 'ph-' + p + (matchMedia('(hover: hover)').matches ? ' hover' : '');
-  $('#bar').hidden = p === 'setup' || p === 'end';
+  $('#bar').hidden = p === 'setup' || p === 'end' || p === 'board';
   $('#play').hidden = !(p === 'guess' || p === 'reveal');
-  $('#panel').hidden = !(p === 'setup' || p === 'end');
+  $('#panel').hidden = !(p === 'setup' || p === 'end' || p === 'board');
   $('#setupView').hidden = p !== 'setup';
   $('#endView').hidden = p !== 'end';
+  $('#boardView').hidden = p !== 'board';
   if (p !== 'reveal') $('#result').hidden = true;
   $('#panel').scrollTop = 0;
   hideTip();
@@ -661,18 +720,35 @@ function featTip(f, c) {
   if (its.length === 1) return short(its[0]) + ' · ' + subOf(its[0], c);
   return FALLBACK[f.id];
 }
-function startGame(queue) {
-  const c = Object.assign({}, cfg);
+// opts.cfg overrides the setup (daily challenge); opts.ranked = { runId, daily } from the server
+let starting = false;
+async function startGame(queue, opts = {}) {
+  if (starting) return;
+  const c = Object.assign({}, opts.cfg || cfg);
   const items = scopeItems(c);
   if (!items.length) return;
-  let ids = queue || shuffle(items.map(it => it.id));
-  if (!queue && c.mode === 'score' && c.rounds !== 'all') ids = ids.slice(0, c.rounds);
+  let ids = queue, ranked = opts.ranked || null;
+  if (!ids && c.mode === 'score' && ACCT.user) {
+    // signed-in score runs are ranked: the server deals the places so it can check the score later
+    starting = true;
+    const btn = $('#btnStart'); btn.disabled = true; btn.textContent = 'Starting…';
+    try {
+      const d = await api('run?action=start', { game: GAME.nav, cfg: { g1: c.g1, g2: c.g2, filter: c.filter, rounds: c.rounds } });
+      ids = d.queue.filter(i => ITEMS[i]); ranked = { runId: d.runId, daily: false };
+    } catch (e) {
+      toast(`Couldn't reach the leaderboard, so this run won't be ranked. (${e.message})`, 5000);
+    } finally { starting = false; btn.disabled = false; btn.textContent = 'Start'; }
+  }
+  if (!ids) {
+    ids = shuffle(items.map(it => it.id));
+    if (c.mode === 'score' && c.rounds !== 'all') ids = ids.slice(0, c.rounds);
+  }
   G = { cfg: c, queue: ids, idx: 0, score: 0, results: [], tries: 0, revealed: false, hint: false, solved: {}, featCls: {},
-        scopeIds: items.map(it => it.id), scale: scaleKm(items), t0: Date.now(), retry: !!queue };
+        scopeIds: items.map(it => it.id), scale: scaleKm(items), t0: Date.now(), retry: !!queue && !ranked, ranked, guesses: [] };
   SCOPE = new Set(G.scopeIds);
   clearMarks(true);
   paintScope(items);
-  $('#barScope').textContent = scopeName(c) + ' · ' + (c.mode === 'score' ? 'Score run' : 'Drill');
+  $('#barScope').textContent = ranked && ranked.daily ? 'Daily challenge · ' + fmtDay(opts.date) : scopeName(c) + ' · ' + (c.mode === 'score' ? 'Score run' : 'Drill');
   setPhase('guess');
   showPrompt();
   fitScope();
@@ -694,6 +770,7 @@ function updateHud() {
   if (G.cfg.mode === 'score') {
     hud.innerHTML = `<span class="chip">Round <b>${Math.min(G.idx + 1, G.queue.length)}</b> / ${G.queue.length}</span>`
       + `<span class="chip"><b>${fmt(G.score)}</b> pts</span>`
+      + (G.ranked ? `<span class="chip">${G.ranked.daily ? 'Daily' : 'Ranked'}</span>` : '')
       + (canHint() && phase === 'guess' && !G.hint ? `<button type="button" class="chip" id="btnHint">${esc(GAME.hint)} (half points)</button>` : '');
     const h = $('#btnHint'); if (h) h.onclick = useHint;
   } else {
@@ -733,12 +810,16 @@ function scoreGuess(ev, f) {
   const [x, y] = d3.pointer(ev, world.node());
   const tgt = current();
   const hit = !!(f && tgt.fs.includes(f.id));
+  const ll = projection.invert([x, y]);
+  const onMap = !!(ll && isFinite(ll[0]) && isFinite(ll[1]));
   let km = 0, nearPt = null;
   if (!hit) { const r = nearestItem([x, y], tgt); km = r.km; nearPt = r.px; }
-  let pts = hit ? 1000 : Math.round(800 * Math.exp(-km / G.scale));
+  // a click outside the projection (beyond the US insets) scores nothing, same as on the server
+  let pts = hit ? 1000 : onMap ? Math.round(800 * Math.exp(-km / G.scale)) : 0;
   if (G.hint) pts = Math.round(pts / 2);
   const clicked = f && !f.properties.w ? f : null;
   G.results.push({ id: tgt.id, km, pts, hint: G.hint });
+  (G.guesses = G.guesses || []).push({ lon: onMap ? ll[0] : null, lat: onMap ? ll[1] : null, k: clicked ? clicked.properties.k : null, hint: !!G.hint });
   G.score += pts;
   setPhase('reveal');
 
@@ -848,12 +929,14 @@ function endGame() {
   if (c.mode === 'score') {
     const max = G.queue.length * 1000;
     const prev = store.get(key, null);
-    const isBest = !G.retry && (prev == null || G.score > prev);
+    const isBest = !G.retry && !(G.ranked && G.ranked.daily) && (prev == null || G.score > prev);
     if (isBest) store.set(key, G.score);
     G.results.forEach(r => { const cls = r.pts >= 800 ? 's1' : r.pts >= 300 ? 's2' : r.pts > 0 ? 's3' : 'sx'; ITEMS[r.id].fs.forEach(fi => setFeatCls(fi, cls)); r.cls = cls; });
     const exact = G.results.filter(r => r.km === 0).length;
     const avgKm = G.results.reduce((s, r) => s + r.km, 0) / G.results.length;
-    html += `<div class="big">${fmt(G.score)} <small>/ ${fmt(max)}</small></div>`;
+    html += `<div class="big" id="endBig">${fmt(G.score)} <small>/ ${fmt(max)}</small></div>`;
+    if (G.ranked) html += `<p class="rankline" id="rankLine">Saving your score to the leaderboard…</p>`;
+    else if (ACCT.online && !ACCT.user && !G.retry) html += `<p class="rankline">Sign in and your next run goes on the leaderboard. <button type="button" class="linkbtn" id="rankSignIn">Sign in</button></p>`;
     html += `<div class="stats"><div class="stat"><b>${exact}</b><span>exact</span></div><div class="stat"><b>${fmt(avgKm)}</b><span>avg km off</span></div><div class="stat"><b>${G.results.filter(r => r.hint).length}</b><span>hints</span></div><div class="stat"><b>${isBest ? 'New' : fmt(prev ?? G.score)}</b><span>${isBest ? 'best!' : 'best'}</span></div></div>`;
     G.results.forEach(r => rows.push({ id: r.id, cls: r.cls, km: r.km === 0 ? 'exact' : (r.km < 1 ? '<1' : fmt(r.km)) + ' km', pt: fmt(r.pts) }));
   } else {
@@ -890,10 +973,16 @@ function endGame() {
   }));
   const r = $('#btnRetry');
   if (r) r.onclick = () => { cfg = Object.assign({}, G.cfg); startGame(shuffle(misses)); };
-  $('#btnAgain').onclick = () => { cfg = Object.assign({}, G.cfg); startGame(); };
+  $('#btnAgain').onclick = () => {
+    if (G.ranked && G.ranked.daily) { toSetup(); return; }
+    cfg = Object.assign({}, G.cfg); startGame();
+  };
+  if (G.ranked && G.ranked.daily) $('#btnAgain').textContent = 'Back to setup';
   $('#btnSetup').onclick = toSetup;
+  const si = $('#rankSignIn'); if (si) si.onclick = () => openAuth('login');
   fitScope();
   (r || $('#btnAgain')).focus({ preventScroll: true });
+  if (G.ranked) finishRanked(G);
 }
 function toSetup() {
   if (G) cfg = Object.assign({}, G.cfg);
@@ -906,7 +995,7 @@ let quitArmed = null;
 $('#btnQuit').addEventListener('click', () => {
   const b = $('#btnQuit');
   if (quitArmed) { clearTimeout(quitArmed); quitArmed = null; b.textContent = 'Change setup'; toSetup(); return; }
-  b.textContent = 'Quit this game?';
+  b.textContent = G && G.ranked && G.ranked.daily ? "Quit? Today's daily is used up" : 'Quit this game?';
   quitArmed = setTimeout(() => { quitArmed = null; b.textContent = 'Change setup'; }, 3000);
 });
 
@@ -937,7 +1026,10 @@ svg.on('click', ev => {
     return;
   }
   if (phase !== 'guess') return;
-  if (G.cfg.mode === 'score') scoreGuess(ev, f); else drillGuess(f);
+  // hit-test the live map (not the last painted frame) so the shape and the click point
+  // always agree, even mid zoom animation
+  const live = landFeat(document.elementFromPoint(ev.clientX, ev.clientY));
+  if (G.cfg.mode === 'score') scoreGuess(ev, live); else drillGuess(live);
 });
 function tipAt(x, y, txt) {
   tip.textContent = txt; tip.hidden = false;
@@ -979,8 +1071,10 @@ $('#zOut').onclick = () => svg.transition().duration(reduceMotion ? 0 : 250).cal
 $('#zFit').onclick = () => fitScope();
 $('#btnNext').onclick = nextRound;
 $('#btnStart').onclick = () => startGame();
+$('#lbOpen').onclick = () => openBoard('setup');
 document.addEventListener('keydown', e => {
-  if (e.target.closest && e.target.closest('select')) return;
+  if (!$('#authModal').hidden) { if (e.key === 'Escape') closeAuth(); return; }
+  if (e.target.closest && e.target.closest('select, input, textarea')) return;
   if (phase === 'reveal' && (e.key === 'Enter' || e.key === ' ') && e.target.id !== 'btnNext') { e.preventDefault(); nextRound(); }
   else if (phase === 'guess' && (e.key === 'h' || e.key === 'H')) useHint();
   else if (e.key === '+' || e.key === '=') $('#zIn').click();
@@ -989,6 +1083,239 @@ document.addEventListener('keydown', e => {
 });
 let rz = null;
 addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (phase !== 'reveal') fitScope(false); else drawOverlay(); }, 150); });
+
+// ---------- accounts & leaderboards (only when the site has its /api backend) ----------
+const ACCT = { online: false, user: null };
+async function api(path, body) {
+  const opt = body
+    ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'same-origin' }
+    : { credentials: 'same-origin' };
+  const r = await fetch('/api/' + path, opt);
+  let j = null;
+  try { j = await r.json(); } catch (e) {}
+  if (!r.ok) throw Object.assign(new Error((j && j.error) || `Request failed (${r.status})`), { status: r.status, data: j });
+  return j;
+}
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtDay(iso) { if (!iso) return ''; const [, m, d] = iso.split('-'); return `${+d} ${MONTHS[+m - 1]}`; }
+function fmtDur(ms) { const m = Math.max(1, Math.round(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`; }
+const filterLabel = k => GAME.filter.opts.find(o => o.key === k)?.label || k;
+function setupLabel(c) {
+  const parts = [scopeName(c), c.rounds === 'all' ? 'all rounds' : c.rounds + ' rounds'];
+  if (c.filter !== GAME.filter.def) parts.push(filterLabel(c.filter).toLowerCase());
+  return parts.join(' · ');
+}
+
+function renderAcct() {
+  const el = $('#acct');
+  el.hidden = !ACCT.online;
+  if (!ACCT.online) return;
+  el.innerHTML = ACCT.user
+    ? `<span>Signed in as <b>${esc(ACCT.user.name)}</b></span><button type="button" class="linkbtn" id="btnLogout">Log out</button>`
+    : `<span>Sign in to get on the leaderboard.</span><button type="button" class="linkbtn" id="btnLogin">Sign in</button><button type="button" class="linkbtn" id="btnSignup">Create account</button>`;
+  const lo = $('#btnLogout'), li = $('#btnLogin'), su = $('#btnSignup');
+  if (lo) lo.onclick = logout;
+  if (li) li.onclick = () => openAuth('login');
+  if (su) su.onclick = () => openAuth('signup');
+}
+function afterAuthChange() { renderAcct(); refreshDaily(); refreshPreview(); }
+
+// sign in / create account dialog
+let authMode = 'login', authBusy = false;
+function openAuth(mode) {
+  authMode = mode;
+  const su = mode === 'signup';
+  $('#authTitle').textContent = su ? 'Create account' : 'Sign in';
+  $('#authLede').textContent = su
+    ? "Pick a username (3 to 20 letters, numbers or underscores) and a password of at least 8 characters. There's no password reset, so keep it somewhere safe."
+    : 'Sign in to put your score runs on the leaderboard and play the daily challenge.';
+  $('#authSubmit').textContent = su ? 'Create account' : 'Sign in';
+  $('#authPass').setAttribute('autocomplete', su ? 'new-password' : 'current-password');
+  $('#authSwitchText').textContent = su ? 'Already have an account?' : 'New here?';
+  $('#authSwitch').textContent = su ? 'Sign in' : 'Create an account';
+  $('#authErr').hidden = true;
+  $('#authModal').hidden = false;
+  hideTip();
+  setTimeout(() => $('#authUser').focus(), 0);
+}
+function closeAuth() { $('#authModal').hidden = true; $('#authPass').value = ''; }
+$('#authClose').onclick = closeAuth;
+$('#authSwitch').onclick = () => openAuth(authMode === 'login' ? 'signup' : 'login');
+$('#authModal').addEventListener('mousedown', e => { if (e.target.id === 'authModal') closeAuth(); });
+$('#authForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (authBusy) return;
+  const username = $('#authUser').value.trim(), password = $('#authPass').value;
+  const err = msg => { $('#authErr').textContent = msg; $('#authErr').hidden = false; };
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return err('Usernames are 3 to 20 letters, numbers or underscores.');
+  if (password.length < 8) return err('Passwords need at least 8 characters.');
+  authBusy = true; $('#authSubmit').disabled = true;
+  try {
+    const d = await api('auth?action=' + (authMode === 'signup' ? 'signup' : 'login'), { username, password });
+    ACCT.user = d.user;
+    closeAuth();
+    toast(authMode === 'signup' ? `Welcome, ${d.user.name}. Your score runs are now ranked.` : `Signed in as ${d.user.name}.`);
+    afterAuthChange();
+  } catch (ex) { err(ex.message); }
+  finally { authBusy = false; $('#authSubmit').disabled = false; }
+});
+async function logout() {
+  try { await api('auth?action=logout', {}); } catch (e) {}
+  ACCT.user = null;
+  toast('Signed out.');
+  afterAuthChange();
+}
+
+// daily challenge card
+let dailyState = null;
+async function refreshDaily() {
+  if (!ACCT.online) { $('#daily').hidden = true; return; }
+  try { dailyState = await api(`board?game=${GAME.nav}&kind=daily&limit=3`); } catch (e) { dailyState = null; }
+  renderDaily();
+}
+function renderDaily() {
+  const el = $('#daily');
+  el.hidden = !ACCT.online;
+  if (!ACCT.online) return;
+  const d = dailyState, played = d && d.played;
+  const nextIn = d ? ` New set in ${fmtDur(d.resetsInMs)}.` : '';
+  let body, btn;
+  if (!ACCT.user) {
+    body = `The same 10 places for everyone today, one go each.${d && d.total ? ` ${d.total} played so far.` : ''}`;
+    btn = '<button class="sign-btn" id="dailyGo" type="button">Sign in to play</button>';
+  } else if (played && played.score != null) {
+    body = `You scored <b>${fmt(played.score)}</b>${d.me ? `, #${d.me.rank} of ${d.total}` : ''}.${nextIn}`;
+    btn = '<button class="sign-btn" id="dailyBoard" type="button">Today\'s board</button>';
+  } else if (played) {
+    body = `You started today's daily but didn't finish it.${nextIn}`;
+    btn = '<button class="sign-btn" id="dailyBoard" type="button">Today\'s board</button>';
+  } else {
+    body = `The same 10 places for everyone today, one go each.${d && d.total ? ` ${d.total} played so far.` : ''}`;
+    btn = '<button class="sign-btn" id="dailyGo" type="button">Play today\'s daily</button>';
+  }
+  el.innerHTML = `<div class="daily-in"><div class="daily-top"><span>Daily challenge</span><span>${esc(fmtDay(d && d.date))}</span></div><p>${body}</p>${btn}</div>`;
+  const go = $('#dailyGo'), bd = $('#dailyBoard');
+  if (go) go.onclick = () => (ACCT.user ? startDaily() : openAuth('login'));
+  if (bd) bd.onclick = () => openBoard('daily');
+}
+async function startDaily() {
+  if (starting) return;
+  starting = true;
+  let d;
+  try { d = await api('run?action=start', { game: GAME.nav, daily: true }); }
+  catch (e) {
+    starting = false;
+    toast(e.message, 4000);
+    if (e.status === 409) { refreshDaily(); openBoard('daily'); }
+    return;
+  }
+  starting = false;
+  await startGame(d.queue.filter(i => ITEMS[i]), { cfg: Object.assign({}, d.cfg, { mode: 'score' }), ranked: { runId: d.runId, daily: true }, date: d.date });
+}
+
+// submit a ranked run for server-side scoring
+async function finishRanked(g) {
+  const line = () => document.getElementById('rankLine');
+  try {
+    const d = await api('run?action=finish', { runId: g.ranked.runId, guesses: g.guesses });
+    const el = line(); if (!el) return;
+    const big = document.getElementById('endBig');
+    if (big && Math.abs(d.score - g.score) > 1) big.innerHTML = `${fmt(d.score)} <small>/ ${fmt(g.queue.length * 1000)}</small>`;
+    const where = g.ranked.daily ? "today's daily" : esc(setupLabel(g.cfg));
+    let txt = `<b>#${d.rank}</b> of ${d.total} on ${where}.`;
+    if (!g.ranked.daily) txt += d.isBest ? ' New personal best!' : ` Your best here is ${fmt(d.best)}.`;
+    el.innerHTML = `${txt} <button type="button" class="linkbtn" id="rankBoard">See leaderboard</button>`;
+    $('#rankBoard').onclick = () => openBoard(g.ranked.daily ? 'daily' : 'setup');
+    if (g.ranked.daily) refreshDaily();
+  } catch (e) {
+    const el = line(); if (!el) return;
+    el.classList.add('bad');
+    el.textContent = `Couldn't save this score: ${e.message}`;
+  }
+}
+
+// leaderboard lists
+function boardQuery(kind, c) {
+  const p = new URLSearchParams({ game: GAME.nav, kind });
+  if (kind === 'setup') { p.set('g1', c.g1); p.set('g2', depthOf(c) >= 2 ? c.g2 : 'all'); p.set('filter', c.filter); p.set('rounds', c.rounds); }
+  return p.toString();
+}
+function renderList(ol, d, n) {
+  if (!d.entries.length) { ol.innerHTML = '<li class="empty">No scores yet. Be the first.</li>'; return; }
+  let html = d.entries.slice(0, n).map(e => `<li class="${e.me ? 'me' : ''}"><span class="rk">${e.rank}</span><span class="nm">${esc(e.name)}</span><span class="sc">${fmt(e.score)}</span></li>`).join('');
+  if (d.me && d.me.rank > n) html += `<li class="me gap"><span class="rk">${d.me.rank}</span><span class="nm">You</span><span class="sc">${fmt(d.me.score)}</span></li>`;
+  ol.innerHTML = html;
+}
+let prevTimer = null, prevSeq = 0;
+function refreshPreview() {
+  clearTimeout(prevTimer);
+  const box = $('#lbPrev');
+  if (!ACCT.online || cfg.mode !== 'score') { box.hidden = true; return; }
+  prevTimer = setTimeout(async () => {
+    const seq = ++prevSeq;
+    try {
+      const d = await api(`board?${boardQuery('setup', cfg)}&limit=5`);
+      if (seq !== prevSeq) return;
+      box.hidden = false;
+      renderList($('#lbPrevList'), d, 5);
+      $('#lbPrevNote').textContent = !ACCT.user ? 'Sign in to get your runs on this board.' : d.total ? `${d.total} ${d.total === 1 ? 'player' : 'players'} on this board.` : '';
+    } catch (e) { box.hidden = true; }
+  }, 250);
+}
+
+// full leaderboard view in the side panel
+let boardTab = 'setup', boardBack = 'setup';
+function openBoard(tab) {
+  boardTab = tab;
+  if (phase !== 'board') boardBack = phase === 'end' ? 'end' : 'setup';
+  setPhase('board');
+  renderBoardView();
+}
+async function renderBoardView() {
+  const v = $('#boardView');
+  const c = boardBack === 'end' && G ? G.cfg : cfg;
+  const tabs = [['daily', 'Daily'], ['full', 'Full country'], ['setup', 'This setup']];
+  v.innerHTML = `<div class="bv-head"><button class="btn" id="bvBack" type="button">&larr; Back</button></div>
+    <div><span class="lab">${esc(document.title)}</span><h2 style="margin-top:6px">Leaderboard</h2></div>
+    <div class="seg" id="bvTabs" role="group" aria-label="Board">${tabs.map(([k, l]) => `<button type="button" data-v="${k}" aria-pressed="${k === boardTab}">${l}</button>`).join('')}</div>
+    <p class="tip-line" id="bvSub"></p>
+    <ol class="board" id="bvList"><li class="empty">Loading…</li></ol>
+    <p class="tip-line" id="bvNote"></p>`;
+  $('#bvBack').onclick = () => {
+    if (boardBack === 'end' && G) setPhase('end');
+    else { setPhase('setup'); syncSetup(false); }
+  };
+  $('#bvTabs').onclick = e => { const b = e.target.closest('button[data-v]'); if (b) { boardTab = b.dataset.v; renderBoardView(); } };
+  const full = { g1: 'all', g2: 'all', filter: GAME.filter.def, rounds: 10 };
+  const q = boardTab === 'setup' ? boardQuery('setup', c) : boardQuery(boardTab);
+  const tab = boardTab;
+  try {
+    const d = await api(`board?${q}&limit=50`);
+    if (tab !== boardTab || phase !== 'board') return;
+    $('#bvSub').textContent = tab === 'daily'
+      ? `Today's 10 places (${fmtDay(d.date)}, UTC). New set in ${fmtDur(d.resetsInMs)}.`
+      : `Best score run on ${setupLabel(tab === 'full' ? full : c)}.`;
+    renderList($('#bvList'), d, 50);
+    $('#bvNote').textContent = !ACCT.user ? 'Sign in to get on the board.' : d.total ? `${d.total} ${d.total === 1 ? 'player' : 'players'} in total.` : '';
+  } catch (e) {
+    if (tab === boardTab) $('#bvList').innerHTML = `<li class="empty">Couldn't load the leaderboard. ${esc(e.message)}</li>`;
+  }
+}
+
+async function initAccounts() {
+  if (location.protocol === 'file:') return;
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch('/api/auth?action=me', { credentials: 'same-origin', signal: ctl.signal });
+    clearTimeout(t);
+    if (!r.ok) return;
+    const d = await r.json();
+    ACCT.online = true;
+    ACCT.user = d.user || null;
+  } catch (e) { return; }
+  afterAuthChange();
+}
 
 // ---------- boot (keeps a game in progress across page updates) ----------
 function start(data) {
@@ -1015,6 +1342,7 @@ const hot = window.claude && window.claude.hot;
 if (hot && hot.snapshot) hot.snapshot(() => ({ cfg, phase, G }));
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (phase === 'setup') fitScope(false); });
 hot && hot.ready ? hot.ready(start) : start((hot && hot.data) || {});
+initAccounts();
 })();
 </script>
 
